@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Video Player</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230a0a0f'/%3E%3Crect x='3' y='3' width='58' height='58' rx='11' fill='none' stroke='%237c6ef5' stroke-width='2.5' opacity='0.55'/%3E%3Cpath d='M24 18 L46 32 L24 46 Z' fill='%237c6ef5'/%3E%3C/svg%3E">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -942,25 +943,54 @@ async function getAllSavedHandles() {
   } catch(e) { return []; }
 }
 async function saveHandleRecord(handle) {
-  if (!handle) return;
-  await saveHandlesBulk([handle]);
+  if (!handle) return null;
+  const idsByName = await saveHandlesBulk([handle]);
+  return idsByName[handle.name] ?? null;
 }
 
-// Save multiple handles in a single IDB transaction — no race conditions
+// Save multiple handles in a single IDB transaction — no race conditions.
+// Dedups by filename (re-saving a known file replaces its old record instead
+// of creating a second one) and returns the generated id for each name so
+// callers can keep playlist entries in sync with their IndexedDB record.
 async function saveHandlesBulk(handles) {
-  if (!handles.length) return;
+  const valid = handles.filter(Boolean);
+  if (!valid.length) return {};
+  const idsByName = {};
   try {
     const db = await openHandleDB();
     await new Promise((resolve, reject) => {
       const tx = db.transaction('handles', 'readwrite');
       const store = tx.objectStore('handles');
-      handles.forEach(h => {
-        if (h) store.add({ handle: h, name: h.name });
-      });
+      const names = new Set(valid.map(h => h.name));
+      const getReq = store.getAll();
+      getReq.onsuccess = () => {
+        (getReq.result || []).forEach(r => { if (!r.__lastdir && names.has(r.name)) store.delete(r.id); });
+        valid.forEach(h => {
+          const addReq = store.add({ handle: h, name: h.name, ts: Date.now() });
+          addReq.onsuccess = () => { idsByName[h.name] = addReq.result; };
+        });
+      };
+      getReq.onerror = () => reject(getReq.error);
       tx.oncomplete = resolve;
       tx.onerror = () => reject(tx.error);
     });
+    await trimToLimit();
   } catch(e) { /* persistence is best-effort */ }
+  return idsByName;
+}
+// Keep at most HANDLE_LIMIT saved video files across all sessions,
+// evicting the oldest (by save time) once the cap is exceeded.
+async function trimToLimit() {
+  try {
+    const vids = (await getAllSavedHandles()).filter(r => !r.__lastdir);
+    if (vids.length > HANDLE_LIMIT) {
+      const stale = vids.slice().sort((a,b) => (a.ts||0)-(b.ts||0)).slice(0, vids.length - HANDLE_LIMIT);
+      const db = await openHandleDB();
+      const tx = db.transaction('handles', 'readwrite');
+      const store = tx.objectStore('handles');
+      stale.forEach(r => store.delete(r.id));
+    }
+  } catch(e) {}
 }
 async function removeHandleRecord(id) {
   if (id == null) return;
@@ -1096,23 +1126,25 @@ async function loadFiles(files, handleMap = {}) {
   const vids = Array.from(files).filter(isVideo);
   if (!vids.length) { showToast('No video files found'); return; }
   _filesAlreadyLoaded = true; // stop any in-flight restoreSavedHandles
-  playlist = vids.map(f => makeEntry(f, handleMap[f.name] || null));
+
+  const newEntries = vids.map(f => makeEntry(f, handleMap[f.name] || null));
+  // Merge into the existing playlist (e.g. files restored from a previous
+  // session) rather than replacing it — re-opening a name already present
+  // just refreshes that row instead of duplicating it.
+  const newNames = new Set(newEntries.map(n => n.name));
+  playlist = playlist.filter(p => !newNames.has(p.name)).concat(newEntries);
+  const playIndex = playlist.length - newEntries.length; // first newly-opened file
 
   const hasHandles = Object.keys(handleMap).length > 0;
   if (hasHandles) {
-    // Only wipe+rewrite IDB when we have real FSA handles to replace them with.
-    // Plain <input> files have no handle, so we leave existing IDB records intact
-    // so the restore list survives for next reload.
-    try {
-      const existing = await getAllSavedHandles();
-      for (const r of existing) { if (!r.__lastdir) await removeHandleRecord(r.id); }
-    } catch(e) {}
-    // Save all handles in one transaction to avoid race conditions
+    // Accumulates across sessions (capped + deduped inside saveHandlesBulk)
+    // instead of wiping previously saved files.
     const handlesToSave = vids.map(f => handleMap[f.name]).filter(Boolean);
-    await saveHandlesBulk(handlesToSave);
+    const idsByName = await saveHandlesBulk(handlesToSave);
+    newEntries.forEach(en => { if (idsByName[en.name] != null) en.recordId = idsByName[en.name]; });
   }
 
-  renderPlaylist(); playIdx(0);
+  renderPlaylist(); playIdx(playIndex);
   dropzone.style.display = 'none'; layout.style.display = 'flex';
 }
 
@@ -1202,10 +1234,17 @@ document.body.addEventListener('drop', async e => {
   const files = Array.from(e.dataTransfer.files).filter(isVideo); // capture synchronously, before any await
   if(!files.length) return;
   const handleMap = await handlesFromDataTransfer(e.dataTransfer);
-  const newEntries = files.map(f => makeEntry(f, handleMap[f.name] || null));
-  saveHandlesBulk(newEntries.map(en => en.handle).filter(Boolean));
+  const existingNames = new Set(playlist.map(p => p.name));
+  const freshFiles = files.filter(f => !existingNames.has(f.name));
+  const skipped = files.length - freshFiles.length;
+  const newEntries = freshFiles.map(f => makeEntry(f, handleMap[f.name] || null));
+  const idsByName = await saveHandlesBulk(newEntries.map(en => en.handle).filter(Boolean));
+  newEntries.forEach(en => { if (idsByName[en.name] != null) en.recordId = idsByName[en.name]; });
   playlist = [...playlist, ...newEntries];
-  renderPlaylist(); showToast(`+${files.length} added`);
+  renderPlaylist();
+  showToast(newEntries.length
+    ? `+${newEntries.length} added${skipped ? ` (${skipped} already in playlist)` : ''}`
+    : 'Already in playlist');
 });
 
 restoreSavedHandles();
