@@ -124,6 +124,47 @@ video{width:100%;display:block;height:100%;min-height:400px;max-height:72vh;obje
 #main-col.hide-cursor{ cursor:none; }
 #main-col.hide-cursor *{ cursor:none !important; }
 
+/* ── Minimal mode (right-click → Hide Bottom Bar) ──
+   In fullscreen, the full control panel (#fs-ui: file-info + buttons + seekbar)
+   is force-hidden regardless of activity/hover state. A slim, independent
+   progress bar (#mini-seek-bar) takes its place and flashes briefly on any
+   action (seek, play/pause, keypress, mouse move) then auto-hides. */
+#main-col.minimal-mode:fullscreen #fs-ui,
+#main-col.minimal-mode:-webkit-full-screen #fs-ui{
+  display:none !important;
+}
+#mini-seek-bar{
+  display:none;
+  position:absolute;left:0;right:0;bottom:0;
+  padding:18px 22px 14px;
+  z-index:55;
+  opacity:0;
+  transform:translateY(6px);
+  pointer-events:none;
+  transition:opacity .28s var(--ease),transform .28s var(--ease);
+  background:linear-gradient(transparent,rgba(8,6,16,.55) 80%);
+}
+#main-col.minimal-mode:fullscreen #mini-seek-bar,
+#main-col.minimal-mode:-webkit-full-screen #mini-seek-bar{
+  display:block;
+}
+#mini-seek-bar.show{ opacity:1; transform:translateY(0); pointer-events:auto; }
+#mini-seek-track{
+  width:100%;height:4px;border-radius:99px;position:relative;cursor:pointer;
+  background:rgba(255,255,255,.18);transition:height .15s var(--ease);
+}
+#mini-seek-bar:hover #mini-seek-track,
+#mini-seek-bar.dragging #mini-seek-track{ height:7px; }
+#mini-buffered-bar{position:absolute;top:0;left:0;height:100%;width:0%;
+  background:rgba(255,255,255,.3);border-radius:99px;pointer-events:none;}
+#mini-progress-bar{position:absolute;top:0;left:0;height:100%;width:0%;
+  background:var(--grad);border-radius:99px;pointer-events:none;
+  box-shadow:0 0 10px -2px var(--accent-glow);}
+#mini-seek-time{
+  margin-top:7px;font-size:11.5px;color:var(--muted);
+  font-variant-numeric:tabular-nums;text-align:right;
+}
+
 /* overlays */
 #flash{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(.5);
   background:rgba(10,9,16,.55);backdrop-filter:blur(6px);
@@ -150,41 +191,56 @@ video{width:100%;display:block;height:100%;min-height:400px;max-height:72vh;obje
 
 /* ── Seekbar thumbnail preview ── */
 #seek-preview{
-  position:absolute;
-  bottom:calc(100% + 16px);
-  transform:translateX(-50%) translateY(4px);
-  pointer-events:none;
-  opacity:0;
-  transition:opacity .18s var(--ease),transform .18s var(--ease);
-  display:flex;flex-direction:column;align-items:center;gap:6px;
-  z-index:20;
+    position:absolute;
+    bottom:calc(100% + 16px);
+    left:0;
+    transform:translateX(-50%);
+    pointer-events:none;
+    opacity:0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:6px;
+    z-index:20;
 }
 #seek-preview.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* In fullscreen, reposition preview to be visible above the seekbar */
+#main-col:fullscreen #seek-preview,
+#main-col:-webkit-full-screen #seek-preview{
+  position:fixed;
+  top:auto;
+  bottom:auto;
+  left:auto;
+  transform:translateX(-50%) translateY(-4px);
+}
 #preview-canvas{
   width:160px;height:90px;
   border-radius:10px;
-  border:1px solid rgba(255,255,255,.14);
+  border:1.5px solid rgba(139,124,248,.4);
   outline:2px solid var(--accent);
-  outline-offset:1px;
+  outline-offset:2px;
   background:#000;
   display:block;
-  box-shadow:0 12px 32px -8px rgba(0,0,0,.85),0 0 24px -8px var(--accent-glow);
+  box-shadow:0 16px 40px -8px rgba(139,124,248,.25),0 0 24px -8px var(--accent-glow);
 }
 #preview-time{
   background:var(--glass);backdrop-filter:blur(10px);
   border:1px solid var(--glass-border);
   border-radius:99px;
-  padding:3px 10px;
+  padding:5px 12px;
   font-size:11px;
   font-weight:600;
   color:var(--text);
   white-space:nowrap;
+  box-shadow:0 4px 12px rgba(0,0,0,.3);
 }
 
 /* ── Controls (normal mode) ── */
 #file-info{font-size:12px;color:var(--muted);padding:9px 18px 0;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-  background:var(--glass);backdrop-filter:blur(18px) saturate(160%);}
+  background:linear-gradient(180deg,rgba(139,124,248,.05),rgba(24,22,36,.6));
+  backdrop-filter:blur(18px) saturate(160%);}
 #controls{background:var(--glass);backdrop-filter:blur(18px) saturate(160%);
   padding:11px 18px 15px;display:flex;
   flex-direction:column;gap:9px;border-top:1px solid var(--glass-border);}
@@ -196,9 +252,9 @@ video{width:100%;display:block;height:100%;min-height:400px;max-height:72vh;obje
 #time-display{font-size:12px;color:var(--muted);white-space:nowrap;min-width:100px;text-align:right;
   font-variant-numeric:tabular-nums;}
 .seek-wrap{flex:1;height:22px;display:flex;align-items:center;cursor:pointer;position:relative;}
-.seek-track{width:100%;height:var(--bar-h);background:rgba(255,255,255,.08);border-radius:99px;
-  position:relative;transition:height .18s var(--ease);}
-.seek-wrap:hover .seek-track{height:7px;}
+.seek-track{width:100%;height:var(--bar-h);background:rgba(139,124,248,.08);border-radius:99px;
+  position:relative;transition:height .18s var(--ease),background .18s var(--ease);}
+.seek-wrap:hover .seek-track{height:7px;background:rgba(139,124,248,.12);}
 #buffered-bar{position:absolute;top:0;left:0;height:100%;background:rgba(255,255,255,.18);
   border-radius:99px;width:0%;pointer-events:none;transition:height .18s var(--ease);}
 #progress-bar{position:absolute;top:0;left:0;height:100%;background:var(--grad);
@@ -214,20 +270,29 @@ video{width:100%;display:block;height:100%;min-height:400px;max-height:72vh;obje
   box-shadow:0 0 0 4px var(--accent-glow),0 2px 8px rgba(0,0,0,.4);pointer-events:none;opacity:0;
   transition:opacity .18s var(--ease),transform .18s var(--ease);}
 .seek-wrap:hover #seek-thumb{opacity:1;transform:translate(-50%,-50%) scale(1);}
-
+#playlist-list {
+    max-height: 500px; /* adjust as needed */
+    overflow-y: auto;
+    overflow-x: hidden;
+}
 /* Buttons row */
 #btn-row{display:flex;align-items:center;gap:4px;flex-wrap:wrap;}
 .ctrl-btn{background:none;border:none;color:var(--text);cursor:pointer;
   display:flex;align-items:center;justify-content:center;
   width:36px;height:36px;border-radius:10px;
-  transition:background .2s var(--ease),color .2s var(--ease),transform .2s var(--ease);flex-shrink:0;}
-.ctrl-btn:hover{background:rgba(255,255,255,.08);color:#fff;transform:translateY(-1px);}
-.ctrl-btn:active{transform:translateY(0) scale(.94);}
+  transition:background .2s var(--ease),color .2s var(--ease),transform .2s var(--ease),
+             box-shadow .2s var(--ease);flex-shrink:0;}
+.ctrl-btn:hover{background:rgba(139,124,248,.12);color:#fff;transform:translateY(-2px);
+  box-shadow:0 4px 12px rgba(139,124,248,.15);}
+.ctrl-btn:active{transform:translateY(0) scale(.92);}
 .ctrl-btn svg{pointer-events:none}
-.ctrl-btn.active{color:var(--accent)}
+.ctrl-btn.active{color:var(--accent);background:rgba(139,124,248,.1);}
 #play-btn{width:44px;height:44px;background:var(--grad);color:#fff;
-  box-shadow:0 6px 18px -4px var(--accent-glow);}
-#play-btn:hover{background:var(--grad);filter:brightness(1.12);color:#fff;transform:translateY(-1px) scale(1.04);}
+  box-shadow:0 6px 18px -4px var(--accent-glow);position:relative;overflow:hidden;}
+#play-btn::before{content:'';position:absolute;inset:0;background:rgba(255,255,255,.1);
+  opacity:0;transition:opacity .2s var(--ease);}
+#play-btn:hover{background:var(--grad);filter:brightness(1.12);color:#fff;transform:translateY(-2px) scale(1.08);
+  box-shadow:0 8px 24px -4px var(--accent-glow);}
 .spacer{flex:1}
 
 /* Volume */
@@ -242,13 +307,15 @@ video{width:100%;display:block;height:100%;min-height:400px;max-height:72vh;obje
 #speed-wrap{position:relative}
 #speed-btn{font-size:12px;font-weight:600;color:var(--muted);background:none;
   border:1px solid var(--border);border-radius:7px;padding:4px 9px;cursor:pointer;
-  min-width:42px;text-align:center;transition:border-color .2s,color .2s,background .2s;}
-#speed-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(139,124,248,.08);}
+  min-width:42px;text-align:center;transition:border-color .2s,color .2s,background .2s,
+              box-shadow .2s;}
+#speed-btn:hover{border-color:var(--accent);color:var(--accent);background:rgba(139,124,248,.08);
+  box-shadow:0 4px 12px rgba(139,124,248,.12);}
 #speed-menu{position:absolute;bottom:calc(100% + 10px);right:0;background:var(--glass);
   backdrop-filter:blur(20px) saturate(160%);
   border:1px solid var(--glass-border);border-radius:12px;padding:6px;display:flex;
   flex-direction:column;gap:2px;z-index:99;min-width:80px;
-  box-shadow:0 16px 40px -10px rgba(0,0,0,.6);
+  box-shadow:0 16px 40px -10px rgba(0,0,0,.6),0 0 20px -6px rgba(139,124,248,.2);
   opacity:0;transform:translateY(6px) scale(.96);pointer-events:none;visibility:hidden;
   transition:opacity .2s var(--ease),transform .2s var(--ease),visibility .2s;
   transform-origin:bottom right;}
@@ -263,23 +330,36 @@ video{width:100%;display:block;height:100%;min-height:400px;max-height:72vh;obje
 /* Absolutely positioned just outside the right edge of the player.
    Because it's taken out of flow, it never affects the player's
    own width or its centered position on the page. */
-#playlist-panel{position:absolute;top:0;left:100%;margin-left:12px;width:220px;
+#playlist-panel{position:absolute;top:0;left:100%;margin-left:12px;width:315px;
   max-height:calc(100vh - 40px);background:var(--glass);backdrop-filter:blur(20px) saturate(160%);
-  border:1px solid var(--glass-border);border-radius:14px;overflow:hidden;
+  border:1px solid var(--glass-border);border-radius:16px;overflow:hidden;
   display:flex;flex-direction:column;z-index:80;
   box-shadow:0 20px 60px -10px rgba(0,0,0,.65);
   opacity:0;transform:translateX(-8px);pointer-events:none;visibility:hidden;
   transition:opacity .25s var(--ease),transform .25s var(--ease),visibility .25s;}
 #playlist-panel.visible{opacity:1;transform:translateX(0);pointer-events:auto;visibility:visible;}
-#playlist-header{padding:11px 14px;font-size:12px;font-weight:600;
+#playlist-header{padding:12px 12px 12px 15px;font-size:12px;font-weight:600;
   color:var(--muted);letter-spacing:.06em;text-transform:uppercase;
-  border-bottom:1px solid var(--glass-border);display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  border-bottom:1px solid var(--glass-border);display:flex;align-items:center;justify-content:space-between;gap:8px;
+  background:linear-gradient(180deg,rgba(255,255,255,.03),transparent);}
 #pl-count{font-size:11px;color:var(--accent)}
+.pl-header-actions{display:flex;align-items:center;gap:6px;flex-shrink:0;}
+#pl-sort-btn{display:flex;align-items:center;gap:4px;font-size:10px;font-weight:600;letter-spacing:0;text-transform:none;
+  color:var(--muted);background:none;border:1px solid var(--border);border-radius:7px;
+  padding:3px 8px 3px 7px;cursor:pointer;flex-shrink:0;transition:border-color .15s,color .15s,background .15s;}
+#pl-sort-btn:hover{border-color:var(--accent);color:var(--accent);}
+#pl-sort-btn.active{border-color:rgba(139,124,248,.5);color:var(--accent);background:rgba(139,124,248,.1);}
+#pl-sort-btn svg{flex-shrink:0;opacity:.85;}
+#pl-autonext-btn{font-size:10px;font-weight:600;letter-spacing:0;text-transform:none;
+  color:var(--muted);background:none;border:1px solid var(--border);border-radius:7px;
+  padding:3px 8px;cursor:pointer;flex-shrink:0;transition:border-color .15s,color .15s,background .15s;}
+#pl-autonext-btn:hover{border-color:var(--accent);color:var(--accent);}
+#pl-autonext-btn.active{border-color:rgba(139,124,248,.5);color:var(--accent);background:rgba(139,124,248,.1);}
 #pl-reset-btn{font-size:10px;font-weight:600;letter-spacing:0;text-transform:none;
   color:var(--muted);background:none;border:1px solid var(--border);border-radius:7px;
   padding:3px 8px;cursor:pointer;flex-shrink:0;transition:border-color .15s,color .15s;}
 #pl-reset-btn:hover{border-color:#f87171;color:#f87171}
-#playlist-list{overflow-y:auto;flex:1;}
+#playlist-list{overflow-y:auto;flex:1;padding:4px;}
 #playlist-list::-webkit-scrollbar{width:4px}
 #playlist-list::-webkit-scrollbar-track{background:transparent}
 #playlist-list::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
@@ -361,14 +441,19 @@ video.fit-tall   {object-fit:fill;transform:scaleY(1.35);}
 #info-overlay b{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;display:block;margin-bottom:8px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;}
 #info-overlay span{color:var(--text);}
 
-.pl-item{display:flex;align-items:center;gap:8px;padding:10px 14px;cursor:pointer;
-  border-bottom:1px solid rgba(255,255,255,.04);transition:background .15s var(--ease);font-size:13px;color:var(--muted);}
+.pl-item{display:flex;align-items:center;gap:8px;padding:9px 10px;cursor:pointer;
+  border-radius:9px;margin-bottom:2px;transition:background .15s var(--ease),color .15s,opacity .15s,transform .15s,box-shadow .15s;font-size:13px;color:var(--muted);}
 .pl-item:hover{background:rgba(255,255,255,.05);color:var(--text)}
 .pl-item.active{background:rgba(139,124,248,.14);color:var(--accent);box-shadow:inset 2px 0 0 var(--accent);}
 .pl-item.pending{opacity:.7}
-.pl-idx{font-size:11px;min-width:18px;text-align:right;opacity:.5}
+.pl-item.dragging{opacity:.42;transform:scale(.985);box-shadow:0 12px 26px -16px rgba(0,0,0,.75);}
+.pl-item.drag-over{background:rgba(139,124,248,.18);color:var(--text);box-shadow:inset 0 0 0 1px rgba(139,124,248,.35);}
+.pl-idx{font-size:11px;min-width:16px;text-align:right;opacity:.5}
 .pl-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
 .pl-pending-tag{font-size:11px;color:var(--accent);opacity:.85}
+.pl-time{font-size:10.5px;color:var(--muted);opacity:.6;flex-shrink:0;white-space:nowrap;
+  background:rgba(255,255,255,.05);padding:2px 6px;border-radius:99px;}
+.pl-item.active .pl-time{color:var(--accent);opacity:.9;background:rgba(139,124,248,.14);}
 .pl-remove{background:none;border:none;color:var(--muted);font-size:12px;cursor:pointer;
   padding:3px 7px;border-radius:6px;opacity:0;flex-shrink:0;transition:opacity .15s,background .15s,color .15s;}
 .pl-item:hover .pl-remove{opacity:1}
@@ -378,7 +463,7 @@ video.fit-tall   {object-fit:fill;transform:scaleY(1.35);}
 #color-panel{background:var(--glass);backdrop-filter:blur(18px) saturate(160%);border-top:1px solid var(--glass-border);
   padding:11px 18px 15px;display:none;gap:14px;flex-wrap:wrap;}
 #color-panel.visible{display:flex;animation:panel-in .25s var(--ease);}
-.slider-group{display:flex;align-items:center;gap:8px;flex:1;min-width:160px;}
+.slider-group{display:flex;align-items:center;gap:1px;flex:1;min-width:160px;}
 .slider-group label{font-size:11px;color:var(--muted);min-width:80px}
 .slider-group input[type=range]{flex:1;-webkit-appearance:none;appearance:none;
   height:3px;background:var(--border);border-radius:99px;outline:none;cursor:pointer;}
@@ -625,7 +710,101 @@ body.resizing video{pointer-events:none;}
 #resume-no{background:none;border:1px solid var(--border);border-radius:9px;color:var(--muted);
   padding:8px 19px;font-size:13px;cursor:pointer;transition:border-color .15s,color .15s;}
 #resume-no:hover{border-color:var(--text);color:var(--text)}
-</style>
+
+/* ── "More tools" overflow menu ── */
+#more-wrap{position:relative;}
+#more-menu{position:absolute;bottom:calc(100% + 10px);right:0;background:var(--glass);
+  backdrop-filter:blur(20px) saturate(160%);
+  border:1px solid var(--glass-border);border-radius:14px;padding:8px;display:flex;
+  flex-direction:column;gap:1px;z-index:99;min-width:228px;max-height:min(420px,70vh);overflow-y:auto;
+  box-shadow:0 20px 50px -12px rgba(0,0,0,.65);
+  opacity:0;transform:translateY(6px) scale(.97);pointer-events:none;visibility:hidden;
+  transition:opacity .2s var(--ease),transform .2s var(--ease),visibility .2s;
+  transform-origin:bottom right;}
+#more-menu.open{opacity:1;transform:translateY(0) scale(1);pointer-events:auto;visibility:visible;}
+#more-menu::-webkit-scrollbar{width:4px}
+#more-menu::-webkit-scrollbar-track{background:transparent}
+#more-menu::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+.more-section-title{font-size:10px;font-weight:600;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.07em;opacity:.65;
+  padding:9px 10px 5px;}
+.more-section-title:first-child{padding-top:6px;}
+.more-divider{height:1px;background:var(--glass-border);margin:5px 6px;flex-shrink:0;}
+/* Row-style buttons inside the overflow menu — icon + label, full width */
+#more-menu .ctrl-btn{width:100%;height:auto;justify-content:flex-start;
+  gap:11px;padding:8px 10px;border-radius:9px;flex-shrink:0;}
+#more-menu .ctrl-btn:hover{transform:none;}
+#more-menu .ctrl-label{display:inline-block;font-size:13px;color:var(--text);white-space:nowrap;
+  font-weight:500;letter-spacing:.01em;}
+#more-menu .ctrl-btn.active .ctrl-label{color:var(--accent);}
+#more-menu .ctrl-btn.active{background:rgba(139,124,248,.1);}
+.ctrl-label{display:none;}
+
+/* ── Right-click context menu ── */
+#ctx-menu{position:fixed;top:0;left:0;background:var(--glass);
+  backdrop-filter:blur(22px) saturate(170%);
+  border:1px solid var(--glass-border);border-radius:14px;padding:7px;
+  display:flex;flex-direction:column;gap:1px;
+  width:240px;max-height:min(560px,82vh);overflow-y:auto;
+  box-shadow:0 24px 60px -14px rgba(0,0,0,.7),0 0 0 1px rgba(0,0,0,.2);
+  z-index:9999;opacity:0;transform:scale(.97);pointer-events:none;visibility:hidden;
+  transition:opacity .14s var(--ease),transform .14s var(--ease),visibility .14s;}
+#ctx-menu.open{opacity:1;transform:scale(1);pointer-events:auto;visibility:visible;}
+#ctx-menu::-webkit-scrollbar{width:4px}
+#ctx-menu::-webkit-scrollbar-track{background:transparent}
+#ctx-menu::-webkit-scrollbar-thumb{background:var(--border);border-radius:4px}
+.ctx-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:9px;
+  cursor:pointer;font-size:13px;color:var(--text);user-select:none;flex-shrink:0;
+  transition:background .12s var(--ease);}
+.ctx-item:hover{background:rgba(255,255,255,.08);}
+.ctx-item.disabled{opacity:.38;pointer-events:none;}
+.ctx-item.active{color:var(--accent);}
+.ctx-ic{width:18px;text-align:center;font-size:14px;flex-shrink:0;line-height:1;}
+.ctx-label{flex:1;white-space:nowrap;display:inline;font-weight:500;}
+.ctx-value{font-size:11.5px;color:var(--muted);font-weight:600;margin-right:2px;}
+.ctx-caret{font-size:13px;color:var(--muted);transition:transform .15s var(--ease);flex-shrink:0;}
+.ctx-item.expanded .ctx-caret{transform:rotate(90deg);}
+.ctx-divider{height:1px;background:var(--glass-border);margin:5px 6px;flex-shrink:0;}
+.ctx-sub{display:flex;flex-direction:column;gap:1px;max-height:0;overflow:hidden;
+  transition:max-height .2s var(--ease);padding-left:8px;flex-shrink:0;}
+.ctx-sub.open{max-height:260px;}
+.ctx-subopt{display:flex;align-items:center;gap:8px;padding:6px 10px 6px 20px;border-radius:8px;
+  cursor:pointer;font-size:12.5px;color:var(--muted);transition:background .12s,color .12s;}
+.ctx-subopt:hover{background:rgba(255,255,255,.07);color:var(--text);}
+.ctx-subopt.active{color:var(--accent);font-weight:600;}
+.ctx-subopt.active::before{content:'✓';font-size:11px;width:12px;}
+.ctx-subopt:not(.active)::before{content:'';width:12px;}
+
+/* ── Fullscreen minimal mode toggle (top-right) ── */
+#fs-minimal-toggle{
+  position:fixed;top:16px;right:16px;z-index:99;
+  display:none;width:44px;height:44px;
+  background:rgba(139,124,248,.12);border:1.5px solid rgba(139,124,248,.3);
+  border-radius:11px;cursor:pointer;color:var(--accent);
+  align-items:center;justify-content:center;font-size:20px;
+  transition:background .25s var(--ease),border-color .25s var(--ease),
+             transform .2s var(--ease),box-shadow .25s var(--ease);
+  backdrop-filter:blur(12px);box-shadow:0 8px 24px -6px rgba(139,124,248,.2);
+}
+#fs-minimal-toggle:hover{
+  background:rgba(139,124,248,.2);border-color:rgba(139,124,248,.5);
+  transform:scale(1.05);box-shadow:0 12px 32px -6px rgba(139,124,248,.3);
+}
+#fs-minimal-toggle:active{transform:scale(.98);}
+#main-col:fullscreen #fs-minimal-toggle,
+#main-col:-webkit-full-screen #fs-minimal-toggle{
+  display:flex;
+}
+#main-col.minimal-mode:fullscreen #fs-minimal-toggle,
+#main-col.minimal-mode:-webkit-full-screen #fs-minimal-toggle{
+  background:rgba(248,113,113,.12);border-color:rgba(248,113,113,.3);
+  color:#f87171;box-shadow:0 8px 24px -6px rgba(248,113,113,.2);
+}
+#main-col.minimal-mode:fullscreen #fs-minimal-toggle:hover,
+#main-col.minimal-mode:-webkit-full-screen #fs-minimal-toggle:hover{
+  background:rgba(248,113,113,.2);border-color:rgba(248,113,113,.5);
+  box-shadow:0 12px 32px -6px rgba(248,113,113,.3);
+}</style>
 </head>
 <body>
 
@@ -675,6 +854,19 @@ body.resizing video{pointer-events:none;}
           <button id="resume-no">Start over</button>
         </div>
       </div>
+
+      <!-- Minimal-mode mini seek bar: only rendered when #main-col has
+           .minimal-mode and is fullscreen (see CSS). Flashes on activity. -->
+      <div id="mini-seek-bar">
+        <div id="mini-seek-track">
+          <div id="mini-buffered-bar"></div>
+          <div id="mini-progress-bar"></div>
+        </div>
+        <div id="mini-seek-time"></div>
+      </div>
+
+      <!-- Fullscreen minimal mode toggle button -->
+      <button id="fs-minimal-toggle" title="Toggle Bottom Bar (B)">👁</button>
 
 
       <!-- fs-ui: shown as overlay in fullscreen, display:contents otherwise -->
@@ -751,17 +943,14 @@ body.resizing video{pointer-events:none;}
             <button class="ctrl-btn" id="prev-btn" title="Previous (PageUp)">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 6h2v12H6zm3.5 6l8.5 6V6z"/></svg>
             </button>
-            <button class="ctrl-btn" id="play-btn" title="Play/Pause (Space)">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path id="play-icon" d="M8 5v14l11-7z"/></svg>
-            </button>
-            <button class="ctrl-btn" id="next-btn" title="Next (PageDown)">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zm2.5-6l5.5 4V8l-5.5 4zm7-6h2v12h-2z"/></svg>
-            </button>
             <button class="ctrl-btn" id="rew-btn" title="Rewind 10s (←)">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4"/>
                 <text x="9.5" y="15.5" font-size="5.5" fill="currentColor" stroke="none" font-family="sans-serif" font-weight="bold">10</text>
               </svg>
+            </button>
+            <button class="ctrl-btn" id="play-btn" title="Play/Pause (Space)">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path id="play-icon" d="M8 5v14l11-7z"/></svg>
             </button>
             <button class="ctrl-btn" id="fwd-btn" title="Forward 10s (→)">
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -769,40 +958,10 @@ body.resizing video{pointer-events:none;}
                 <text x="9.5" y="15.5" font-size="5.5" fill="currentColor" stroke="none" font-family="sans-serif" font-weight="bold">10</text>
               </svg>
             </button>
+            <button class="ctrl-btn" id="next-btn" title="Next (PageDown)">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M6 18l8.5-6L6 6v12zm2.5-6l5.5 4V8l-5.5 4zm7-6h2v12h-2z"/></svg>
+            </button>
             <div class="spacer"></div>
-            <button class="ctrl-btn" id="ab-btn" title="A→B Loop (L)">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
-                <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
-              </svg>
-            </button>
-            <button class="ctrl-btn" id="shot-btn" title="Screenshot (S)">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-                <circle cx="12" cy="13" r="4"/>
-              </svg>
-            </button>
-            <button class="ctrl-btn" id="srt-btn" title="Load Subtitles (.srt)" onclick="document.getElementById('srt-input').click()">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="2" y="4" width="20" height="16" rx="2"/><path d="M7 15h4m-4-4h10"/>
-              </svg>
-            </button>
-            <button class="ctrl-btn" id="bm-btn" title="Bookmarks (B)">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>
-              </svg>
-            </button>
-            <button class="ctrl-btn" id="color-btn" title="Color Adjustments (C)">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"/>
-              </svg>
-            </button>
-            <button class="ctrl-btn" id="pip-btn" title="Picture in Picture (P)">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="2" y="4" width="20" height="16" rx="2"/>
-                <rect x="12" y="12" width="8" height="6" rx="1" fill="currentColor" stroke="none" opacity=".6"/>
-              </svg>
-            </button>
             <div id="vol-wrap">
               <button class="ctrl-btn" id="mute-btn" title="Mute (M)">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -826,34 +985,6 @@ body.resizing video{pointer-events:none;}
                 <button class="speed-opt" data-speed="3">3×</button>
               </div>
             </div>
-            <button class="ctrl-btn" id="pl-toggle-btn" title="Playlist (Q)">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
-                <line x1="8" y1="18" x2="21" y2="18"/>
-                <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/>
-                <line x1="3" y1="18" x2="3.01" y2="18"/>
-              </svg>
-            </button>
-            <button class="ctrl-btn" id="kbd-btn" title="Keyboard Shortcuts (?)">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="2" y="6" width="20" height="12" rx="2"/>
-                <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8"/>
-              </svg>
-            </button>
-            <button class="ctrl-btn" title="Open file" onclick="pickFiles()">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
-              </svg>
-            </button>
-            <!-- Chapter jump -->
-            <button class="ctrl-btn" id="chapter-btn" title="Jump to Scene (J)">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="3" width="7" height="7" rx="1"/>
-                <rect x="14" y="3" width="7" height="7" rx="1"/>
-                <rect x="3" y="14" width="7" height="7" rx="1"/>
-                <rect x="14" y="14" width="7" height="7" rx="1"/>
-              </svg>
-            </button>
             <!-- Fit/Stretch mode -->
             <div id="fit-wrap">
               <button id="fit-btn" title="Stretch / Fit Mode (V)">Fit ⬜</button>
@@ -865,27 +996,181 @@ body.resizing video{pointer-events:none;}
                 <button class="fit-opt" data-fit="fit-tall">↕ Tall</button>
               </div>
             </div>
-            <!-- Slow motion toggle -->
-            <button class="ctrl-btn" id="slo-btn" title="Slow Motion (Z)">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"/>
-                <polyline points="12 6 12 12 15 15"/>
-                <line x1="6" y1="12" x2="2" y2="12"/>
-              </svg>
-            </button>
-            <!-- Zoom toggle -->
-            <button class="ctrl-btn" id="zoom-btn" title="Zoom (+/− to step, X to reset)">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                <line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>
-              </svg>
-            </button>
-            <!-- Info overlay -->
-            <button class="ctrl-btn" id="info-btn" title="Video Info (I)">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
-              </svg>
-            </button>
+
+        <!-- Playback -->
+
+        <!-- Screenshot -->
+<button class="ctrl-btn" id="shot-btn" title="Screenshot (S)">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2">
+        <path d="M4 7h4l2-2h4l2 2h4v12H4z"/>
+        <circle cx="12" cy="13" r="4"/>
+    </svg>
+</button>
+
+<!-- Bookmark -->
+<button class="ctrl-btn" id="bm-btn" title="Bookmarks (B)">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2">
+        <path d="M6 3h12v18l-6-4-6 4z"/>
+    </svg>
+</button>
+
+<!-- Jump To Scene -->
+<button class="ctrl-btn" id="chapter-btn" title="Jump To Scene (J)">
+    <svg width="18" height="18" viewBox="0 0 24 24"
+         fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="4" width="7" height="7"/>
+        <rect x="14" y="4" width="7" height="7"/>
+        <rect x="3" y="13" width="7" height="7"/>
+        <rect x="14" y="13" width="7" height="7"/>
+    </svg>
+</button>
+
+<!-- Playlist -->
+<button class="ctrl-btn" id="pl-toggle-btn" title="Playlist (Q)">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2">
+        <line x1="8" y1="6" x2="21" y2="6"/>
+        <line x1="8" y1="12" x2="21" y2="12"/>
+        <line x1="8" y1="18" x2="21" y2="18"/>
+        <circle cx="4" cy="6" r="1"/>
+        <circle cx="4" cy="12" r="1"/>
+        <circle cx="4" cy="18" r="1"/>
+    </svg>
+</button>
+
+<!-- Color -->
+<button class="ctrl-btn" id="color-btn" title="Color Controls (C)">
+    <svg width="18" height="18" viewBox="0 0 24 24"
+         fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round">
+        <line x1="4" y1="6" x2="20" y2="6"/>
+        <circle cx="9" cy="6" r="2"/>
+        <line x1="4" y1="12" x2="20" y2="12"/>
+        <circle cx="15" cy="12" r="2"/>
+        <line x1="4" y1="18" x2="20" y2="18"/>
+        <circle cx="11" cy="18" r="2"/>
+    </svg>
+</button>
+
+<button class="ctrl-btn" id="ab-btn" title="A→B Loop (L)">
+    <svg width="18" height="18" viewBox="0 0 24 24"
+         fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round">
+        <path d="M17 2l4 4-4 4"/>
+        <path d="M3 11V9a3 3 0 0 1 3-3h15"/>
+        <path d="M7 22l-4-4 4-4"/>
+        <path d="M21 13v2a3 3 0 0 1-3 3H3"/>
+    </svg>
+</button>
+
+<!-- zoom in-->
+<button class="ctrl-btn" id="zoom-btn" title="Zoom">
+    <svg width="18" height="18" viewBox="0 0 24 24"
+         fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="10" cy="10" r="6"/>
+        <line x1="14.5" y1="14.5" x2="21" y2="21"/>
+        <path d="M10 7v6M7 10h6"/>
+    </svg>
+</button>
+<!-- Zoom reset TODO-->
+
+
+<!-- Picture In Picture -->
+<button class="ctrl-btn" id="pip-btn" title="Picture In Picture (P)">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2">
+        <rect x="3" y="5" width="18" height="14" rx="2"/>
+        <rect x="12" y="11" width="7" height="5"/>
+    </svg>
+</button>
+
+            <!-- ── Overflow: everything else, grouped ── -->
+            <div id="more-wrap">
+              <button class="ctrl-btn" id="more-btn" title="More tools">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+                  <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
+                </svg>
+              </button>
+              <div id="more-menu">
+
+                <div class="more-section-title">Loop &amp; Effects</div>
+                <button class="ctrl-btn" id="ab-btn" title="A→B Loop (L)">
+                  <span class="ctx-ic">🔁</span>
+                  <span class="ctrl-label">A→B Loop</span>
+                </button>
+                <button class="ctrl-btn" id="slo-btn" title="Slow Motion (Z)">
+                  <span class="ctx-ic">🐢</span>
+                  <span class="ctrl-label">Slow Motion</span>
+                </button>
+                <button class="ctrl-btn" id="zoom-btn" title="Zoom (+/− to step, X to reset)">
+                  <span class="ctx-ic">🔍</span>
+                  <span class="ctrl-label">Zoom</span>
+                </button>
+
+                <div class="more-divider"></div>
+                <div class="more-section-title">Capture &amp; Color</div>
+                <button class="ctrl-btn" id="shot-btn" title="Screenshot (S)">
+                  <span class="ctx-ic">📸</span>
+                  <span class="ctrl-label">Screenshot</span>
+                </button>
+                <button class="ctrl-btn" id="color-btn" title="Color Adjustments (C)">
+                  <span class="ctx-ic">🎨</span>
+                  <span class="ctrl-label">Color Adjustments</span>
+                </button>
+
+                <div class="more-divider"></div>
+                <div class="more-section-title">Library</div>
+                <button class="ctrl-btn" id="srt-btn" title="Load Subtitles (.srt)" onclick="document.getElementById('srt-input').click()">
+                  <span class="ctx-ic">💬</span>
+                  <span class="ctrl-label">Load Subtitles…</span>
+                </button>
+                <button class="ctrl-btn" id="bm-btn" title="Bookmarks (B)">
+                  <span class="ctx-ic">🔖</span>
+                  <span class="ctrl-label">Bookmarks</span>
+                </button>
+                <!-- Chapter jump -->
+                <button class="ctrl-btn" id="chapter-btn" title="Jump to Scene (J)">
+                  <span class="ctx-ic">⚡</span>
+                  <span class="ctrl-label">Jump to Scene</span>
+                </button>
+                <button class="ctrl-btn" id="pl-toggle-btn" title="Playlist (Q)">
+                  <span class="ctx-ic">☰</span>
+                  <span class="ctrl-label">Playlist</span>
+                </button>
+                <button class="ctrl-btn" id="openfile-btn" title="Open file" onclick="pickFiles()">
+                  <span class="ctx-ic">📁</span>
+                  <span class="ctrl-label">Open File…</span>
+                </button>
+
+                <div class="more-divider"></div>
+                <div class="more-section-title">Info</div>
+                <button class="ctrl-btn" id="pip-btn" title="Picture in Picture (P)">
+                  <span class="ctx-ic">🖼</span>
+                  <span class="ctrl-label">Picture in Picture</span>
+                </button>
+                <button class="ctrl-btn" id="info-btn" title="Video Info (I)">
+                  <span class="ctx-ic">📊</span>
+                  <span class="ctrl-label">Video Info</span>
+                </button>
+                <button class="ctrl-btn" id="kbd-btn" title="Keyboard Shortcuts (?)">
+                  <span class="ctx-ic">⌨</span>
+                  <span class="ctrl-label">Keyboard Shortcuts</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Open File -->
+<button class="ctrl-btn" id="openfile-btn"
+        title="Open File"
+        onclick="pickFiles()">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+         stroke="currentColor" stroke-width="2">
+        <path d="M3 7h5l2 2h11v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+    </svg>
+</button>
+
             <button class="ctrl-btn" id="fs-btn" title="Fullscreen (F)">
               <svg id="fs-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
@@ -899,8 +1184,27 @@ body.resizing video{pointer-events:none;}
   </div><!-- /main-col -->
 </div><!-- /layout -->
 
+
+<!--
 <div id="playlist-panel">
   <div id="playlist-header"><span class="pl-label">Playlist <span id="pl-count"></span></span><button id="pl-reset-btn" title="Clear saved playlist">Reset</button></div>
+  <div id="playlist-list"></div>
+</div>
+-->
+<div id="playlist-panel">
+  <div id="playlist-header">
+    <span class="pl-label">
+      Playlist <span id="pl-count"></span>
+    </span>
+    <span class="pl-header-actions">
+      <button id="pl-sort-btn" class="active" title="Toggle: Recent first / Order added">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7h11M3 12h7M3 17h4"/><path d="M17 4v15m0 0 4-4m-4 4-4-4"/></svg>
+        <span id="pl-sort-label">Recent</span>
+      </button>
+      <button id="pl-autonext-btn" class="active" title="Auto play next video after the current one ends">Auto Next</button>
+      <button id="pl-reset-btn" title="Reset playlist order">Reset Order</button>
+    </span>
+  </div>
   <div id="playlist-list"></div>
 </div>
 
@@ -948,9 +1252,128 @@ body.resizing video{pointer-events:none;}
   <span>PgUp/PgDn</span> Prev/Next &nbsp;
   <span>L</span> A→B &nbsp;
   <span>S</span> Screenshot &nbsp;
+  <span>Right-click</span> All options &nbsp;
   <span>?</span> All shortcuts
 </p>
 <canvas id="shot-canvas" style="display:none"></canvas>
+
+<!-- ── Right-click context menu: surfaces every player action ── -->
+<div id="ctx-menu">
+
+  <div class="ctx-item" id="ctx-play" data-forward="play-btn">
+    <span class="ctx-ic" id="ctx-play-ic">▶</span><span class="ctx-label" id="ctx-play-label">Play</span>
+  </div>
+  <div class="ctx-item" id="ctx-prev" data-forward="prev-btn">
+    <span class="ctx-ic">⏮</span><span class="ctx-label">Previous file</span>
+  </div>
+  <div class="ctx-item" id="ctx-next" data-forward="next-btn">
+    <span class="ctx-ic">⏭</span><span class="ctx-label">Next file</span>
+  </div>
+  <div class="ctx-item" data-forward="rew-btn">
+    <span class="ctx-ic">⏪</span><span class="ctx-label">Rewind 10s</span>
+  </div>
+  <div class="ctx-item" data-forward="fwd-btn">
+    <span class="ctx-ic">⏩</span><span class="ctx-label">Forward 10s</span>
+  </div>
+  <div class="ctx-item" id="ctx-resume-toggle">
+    <span class="ctx-ic">▶</span>
+    <span class="ctx-label">Resume Playback</span>
+    <span class="ctx-value" id="ctx-resume-value"></span>
+</div>
+
+  <div class="ctx-divider"></div>
+
+  <div class="ctx-item" data-forward="ab-btn">
+    <span class="ctx-ic">🔁</span><span class="ctx-label" id="ctx-ab-label">A→B Loop</span>
+  </div>
+  <div class="ctx-item" id="ctx-slo" data-forward="slo-btn">
+    <span class="ctx-ic">🐢</span><span class="ctx-label">Slow Motion</span>
+  </div>
+  <div class="ctx-item" id="ctx-zoom" data-forward="zoom-btn">
+    <span class="ctx-ic">🔍</span><span class="ctx-label">Zoom In</span>
+  </div>
+  <div class="ctx-item" id="ctx-zoom-reset">
+    <span class="ctx-ic">↺</span><span class="ctx-label">Reset Zoom</span>
+  </div>
+
+  <div class="ctx-divider"></div>
+
+  <div class="ctx-item ctx-expand" id="ctx-speed-toggle">
+    <span class="ctx-ic">⚡</span><span class="ctx-label">Speed</span>
+    <span class="ctx-value" id="ctx-speed-value">1×</span><span class="ctx-caret">›</span>
+  </div>
+  <div class="ctx-sub" id="ctx-speed-sub">
+    <div class="ctx-subopt" data-speed="0.25">0.25×</div>
+    <div class="ctx-subopt" data-speed="0.5">0.5×</div>
+    <div class="ctx-subopt" data-speed="0.75">0.75×</div>
+    <div class="ctx-subopt active" data-speed="1">1×</div>
+    <div class="ctx-subopt" data-speed="1.25">1.25×</div>
+    <div class="ctx-subopt" data-speed="1.5">1.5×</div>
+    <div class="ctx-subopt" data-speed="2">2×</div>
+    <div class="ctx-subopt" data-speed="3">3×</div>
+  </div>
+
+  <div class="ctx-item ctx-expand" id="ctx-fit-toggle">
+    <span class="ctx-ic">⬜</span><span class="ctx-label">Video Fit</span>
+    <span class="ctx-value" id="ctx-fit-value">Contain</span><span class="ctx-caret">›</span>
+  </div>
+  <div class="ctx-sub" id="ctx-fit-sub">
+    <div class="ctx-subopt active" data-fit="fit-contain">⬜ Contain</div>
+    <div class="ctx-subopt" data-fit="fit-fill">⛶ Stretch</div>
+    <div class="ctx-subopt" data-fit="fit-cover">✂ Crop Fill</div>
+    <div class="ctx-subopt" data-fit="fit-wide">↔ Wide</div>
+    <div class="ctx-subopt" data-fit="fit-tall">↕ Tall</div>
+  </div>
+
+  <div class="ctx-divider"></div>
+
+  <div class="ctx-item" data-forward="color-btn">
+    <span class="ctx-ic">🎨</span><span class="ctx-label">Color Adjustments</span>
+  </div>
+  <div class="ctx-item" data-forward="shot-btn">
+    <span class="ctx-ic">📸</span><span class="ctx-label">Screenshot</span>
+  </div>
+  <div class="ctx-item" data-forward="srt-btn">
+    <span class="ctx-ic">💬</span><span class="ctx-label">Load Subtitles…</span>
+  </div>
+  <div class="ctx-item" data-forward="bm-btn">
+    <span class="ctx-ic">🔖</span><span class="ctx-label">Bookmarks</span>
+  </div>
+  <div class="ctx-item" data-forward="chapter-btn">
+    <span class="ctx-ic">⚡</span><span class="ctx-label">Jump to Scene</span>
+  </div>
+
+  <div class="ctx-divider"></div>
+
+  <div class="ctx-item" data-forward="pip-btn">
+    <span class="ctx-ic">🖼</span><span class="ctx-label">Picture-in-Picture</span>
+  </div>
+  <div class="ctx-item" data-forward="pl-toggle-btn">
+    <span class="ctx-ic">☰</span><span class="ctx-label">Playlist</span>
+  </div>
+  <div class="ctx-item" data-forward="openfile-btn">
+    <span class="ctx-ic">📁</span><span class="ctx-label">Open File…</span>
+  </div>
+
+  <div class="ctx-divider"></div>
+
+  <div class="ctx-item" data-forward="mute-btn">
+    <span class="ctx-ic" id="ctx-mute-ic">🔊</span><span class="ctx-label" id="ctx-mute-label">Mute</span>
+  </div>
+  <div class="ctx-item" data-forward="info-btn">
+    <span class="ctx-ic">📊</span><span class="ctx-label">Video Info</span>
+  </div>
+  <div class="ctx-item" data-forward="kbd-btn">
+    <span class="ctx-ic">⌨</span><span class="ctx-label">Keyboard Shortcuts</span>
+  </div>
+  <div class="ctx-item" id="ctx-minimal">
+    <span class="ctx-ic" id="ctx-minimal-ic">🙈</span><span class="ctx-label" id="ctx-minimal-label">Hide Bottom Bar</span>
+  </div>
+  <div class="ctx-item" data-forward="fs-btn">
+    <span class="ctx-ic" id="ctx-fs-ic">⛶</span><span class="ctx-label" id="ctx-fs-label">Fullscreen</span>
+  </div>
+
+</div>
 
 <script>
 // ── DOM refs ──
@@ -1013,9 +1436,18 @@ const colorReset = document.getElementById('color-reset');
 
 const plToggleBtn  = document.getElementById('pl-toggle-btn');
 const plResetBtn   = document.getElementById('pl-reset-btn');
+const plSortBtn    = document.getElementById('pl-sort-btn');
+const plSortLabel  = document.getElementById('pl-sort-label');
+const plAutoNextBtn= document.getElementById('pl-autonext-btn');
 const playlistPanel= document.getElementById('playlist-panel');
 const playlistList = document.getElementById('playlist-list');
 const plCount      = document.getElementById('pl-count');
+let sortRecentEnabled = true; // when off, playlist keeps the order files were added — no resorting
+let autoNextEnabled = true;
+const PLAYLIST_ORDER_KEY = 'vp_playlist_custom_order';
+const PLAYLIST_ORIGINAL_ORDER_KEY = 'vp_playlist_original_order';
+let originalPlaylistOrder = [];
+let draggedPlaylistIndex = null;
 
 const kbdBtn     = document.getElementById('kbd-btn');
 const kbdOverlay = document.getElementById('kbd-overlay');
@@ -1048,9 +1480,11 @@ function showControls() {
 
 mainCol.addEventListener('mousemove', () => {
   if (document.fullscreenElement) showControls();
+  if (minimalMode) flashMiniSeek();
 });
 mainCol.addEventListener('mouseenter', () => {
   if (document.fullscreenElement) showControls();
+  if (minimalMode) flashMiniSeek();
 });
 // Keep controls visible while hovering over them
 document.getElementById('fs-ui').addEventListener('mouseenter', () => {
@@ -1072,12 +1506,106 @@ document.addEventListener('fullscreenchange', () => {
   fsIconEl.setAttribute('d', fs
     ? 'M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3'
     : 'M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3');
+  moveSeekPreviewToActiveTrack();
   if (fs) {
-    showControls();
+    if (minimalMode) flashMiniSeek(); else showControls();
   } else {
     clearTimeout(fsHideTimer);
     mainCol.classList.remove('ctrl-visible','hide-cursor');
+    clearTimeout(miniSeekTimer);
+    miniSeekBar.classList.remove('show');
   }
+});
+
+// ── Minimal mode (right-click → Hide Bottom Bar) ──
+// When active + fullscreen, the full control panel (#fs-ui) is force-hidden
+// via CSS, and this slim mini seek bar flashes on activity instead.
+let minimalMode = false;
+let miniSeekTimer, miniDragging = false, miniHovering = false;
+const MINI_SEEK_DELAY = 1500;
+const miniSeekBar      = document.getElementById('mini-seek-bar');
+const miniSeekTrack    = document.getElementById('mini-seek-track');
+const miniProgressBar  = document.getElementById('mini-progress-bar');
+const miniBufferedBar  = document.getElementById('mini-buffered-bar');
+const miniSeekTime     = document.getElementById('mini-seek-time');
+
+function moveSeekPreviewToActiveTrack() {
+  const shouldUseMiniTrack = minimalMode && !!document.fullscreenElement;
+  const target = shouldUseMiniTrack ? miniSeekTrack : seekWrap;
+  if (seekPreview.parentElement !== target) target.appendChild(seekPreview);
+  seekPreview.removeAttribute('style');
+  seekPreview.classList.remove('show');
+}
+
+function flashMiniSeek() {
+  if (!minimalMode || !document.fullscreenElement) return;
+  miniSeekBar.classList.add('show');
+  mainCol.classList.remove('hide-cursor');
+  clearTimeout(miniSeekTimer);
+  miniSeekTimer = setTimeout(() => {
+    if (miniDragging || miniHovering) return;
+    miniSeekBar.classList.remove('show');
+    mainCol.classList.add('hide-cursor');
+  }, MINI_SEEK_DELAY);
+}
+
+function applyMinimalMode() {
+  mainCol.classList.toggle('minimal-mode', minimalMode);
+  moveSeekPreviewToActiveTrack();
+  if (!document.fullscreenElement) return;
+  if (minimalMode) {
+    clearTimeout(fsHideTimer);
+    mainCol.classList.remove('ctrl-visible');
+    flashMiniSeek();
+  } else {
+    clearTimeout(miniSeekTimer);
+    miniSeekBar.classList.remove('show');
+    showControls();
+  }
+}
+
+function toggleMinimalMode() {
+  minimalMode = !minimalMode;
+  applyMinimalMode();
+  showToast(minimalMode ? '🙈 Bottom bar hidden — progress flashes on activity' : '👁 Bottom bar restored');
+  savePrefs();
+}
+
+function miniRatioFromEvent(e) {
+  const rect = miniSeekTrack.getBoundingClientRect();
+  return Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+}
+miniSeekTrack.addEventListener('mousedown', e => {
+  miniDragging = true;
+  miniSeekBar.classList.add('dragging');
+  if (vid.duration) vid.currentTime = miniRatioFromEvent(e) * vid.duration;
+  flashMiniSeek();
+});
+document.addEventListener('mousemove', e => {
+  if (miniDragging && vid.duration) { vid.currentTime = miniRatioFromEvent(e) * vid.duration; flashMiniSeek(); }
+});
+document.addEventListener('mouseup', () => {
+  if (miniDragging) { miniDragging = false; miniSeekBar.classList.remove('dragging'); flashMiniSeek(); }
+});
+miniSeekBar.addEventListener('mouseenter', () => {
+  miniHovering = true;
+  clearTimeout(miniSeekTimer);
+  miniSeekBar.classList.add('show');
+  mainCol.classList.remove('hide-cursor');
+});
+miniSeekBar.addEventListener('mouseleave', () => {
+  miniHovering = false;
+  flashMiniSeek();
+});
+vid.addEventListener('timeupdate', () => {
+  if (!vid.duration) return;
+  const pct = (vid.currentTime / vid.duration) * 100;
+  miniProgressBar.style.width = pct + '%';
+  miniSeekTime.textContent = `${fmt(vid.currentTime)} / ${fmt(vid.duration)}`;
+});
+vid.addEventListener('progress', () => {
+  if (vid.buffered.length && vid.duration)
+    miniBufferedBar.style.width = (vid.buffered.end(vid.buffered.length - 1) / vid.duration * 100) + '%';
 });
 
 // ── Persistence ──
@@ -1090,10 +1618,17 @@ function loadPrefs() {
       speedBtn.textContent = p.speed===1 ? '1×' : p.speed+'×';
       speedOpts.forEach(o => o.classList.toggle('active', parseFloat(o.dataset.speed)===p.speed));
     }
+    if (p.minimalMode !== undefined) { minimalMode = p.minimalMode; applyMinimalMode(); }
+    if (p.sortRecentEnabled !== undefined) {
+      setSortRecentEnabled(p.sortRecentEnabled);
+    }
+    if (p.autoNextEnabled !== undefined) {
+      setAutoNextEnabled(p.autoNextEnabled);
+    }
   } catch(e){}
 }
 function savePrefs() {
-  try { localStorage.setItem('vp_prefs', JSON.stringify({volume:vid.volume, speed:vid.playbackRate})); } catch(e){}
+  try { localStorage.setItem('vp_prefs', JSON.stringify({volume:vid.volume, speed:vid.playbackRate, minimalMode, sortRecentEnabled, autoNextEnabled})); } catch(e){}
 }
 loadPrefs();
 
@@ -1239,8 +1774,8 @@ async function handlesFromDataTransfer(dt) {
   }
   return map;
 }
-function makeEntry(file, handle = null, recordId = null) {
-  return { file, handle, recordId, name: file ? file.name : (handle ? handle.name : 'Unknown file'), size: file ? file.size : null };
+function makeEntry(file, handle = null, recordId = null, openedAt = Date.now()) {
+  return { file, handle, recordId, name: file ? file.name : (handle ? handle.name : 'Unknown file'), size: file ? file.size : null, openedAt };
 }
 // Open the Chromium file picker (keeps a reusable handle) or fall back to the plain <input>.
 // Remember last directory handle across sessions using IndexedDB
@@ -1318,11 +1853,11 @@ async function restoreSavedHandles() {
       if (perm === 'granted') {
         // Permission already granted — load file directly
         const file = await rec.handle.getFile();
-        restored.push(makeEntry(file, rec.handle, rec.id));
+        restored.push(makeEntry(file, rec.handle, rec.id, rec.ts));
       } else {
         // Permission needs re-granting — show in playlist as clickable ghost
         // playIdx() will call handle.requestPermission() when user clicks it
-        restored.push(makeEntry(null, rec.handle, rec.id));
+        restored.push(makeEntry(null, rec.handle, rec.id, rec.ts));
       }
     } catch(e) {
       removeHandleRecord(rec.id); // handle stale (file deleted/moved)
@@ -1331,6 +1866,8 @@ async function restoreSavedHandles() {
 
   if (_filesAlreadyLoaded || !restored.length) return;
   playlist = restored;
+  rememberOriginalPlaylistOrder();
+  if (!applySavedPlaylistOrder() && sortRecentEnabled) playlist.sort((a,b) => (b.openedAt||0) - (a.openedAt||0)); // most recently opened first
   renderPlaylist();
 
   // Show dropzone + playlist on startup — don't auto-play, let user choose
@@ -1354,7 +1891,10 @@ async function loadFiles(files, handleMap = {}) {
   // just refreshes that row instead of duplicating it.
   const newNames = new Set(newEntries.map(n => n.name));
   playlist = playlist.filter(p => !newNames.has(p.name)).concat(newEntries);
-  const playIndex = playlist.length - newEntries.length; // first newly-opened file
+  rememberOriginalPlaylistOrder();
+  if (applySavedPlaylistOrder()) saveCustomPlaylistOrder();
+  else if (sortRecentEnabled) sortPlaylistByRecency();
+  const firstNewEntry = newEntries[0]; // play the first newly-opened file
 
   const hasHandles = Object.keys(handleMap).length > 0;
   if (hasHandles) {
@@ -1365,8 +1905,109 @@ async function loadFiles(files, handleMap = {}) {
     newEntries.forEach(en => { if (idsByName[en.name] != null) en.recordId = idsByName[en.name]; });
   }
 
-  renderPlaylist(); playIdx(playIndex);
+  renderPlaylist(); playIdx(playlist.indexOf(firstNewEntry));
   dropzone.style.display = 'none'; layout.style.display = 'flex';
+}
+
+function playlistIdentity(entry) {
+  return entry ? `${entry.name}|${entry.size ?? ''}` : '';
+}
+
+function rememberOriginalPlaylistOrder() {
+  if (!originalPlaylistOrder.length) {
+    try {
+      const savedOriginal = JSON.parse(localStorage.getItem(PLAYLIST_ORIGINAL_ORDER_KEY) || '[]');
+      if (Array.isArray(savedOriginal)) originalPlaylistOrder = savedOriginal;
+    } catch(e) {}
+  }
+  const currentIds = playlist.map(playlistIdentity);
+  const remaining = new Set(currentIds);
+  originalPlaylistOrder = originalPlaylistOrder.filter(id => {
+    if (!remaining.has(id)) return false;
+    remaining.delete(id);
+    return true;
+  });
+  currentIds.forEach(id => {
+    if (!originalPlaylistOrder.includes(id)) originalPlaylistOrder.push(id);
+  });
+  try { localStorage.setItem(PLAYLIST_ORIGINAL_ORDER_KEY, JSON.stringify(originalPlaylistOrder)); } catch(e) {}
+}
+
+function setSortRecentEnabled(enabled) {
+  sortRecentEnabled = enabled;
+  plSortBtn.classList.toggle('active', sortRecentEnabled);
+  plSortLabel.textContent = sortRecentEnabled ? 'Recent' : 'Added';
+  plSortBtn.title = sortRecentEnabled ? 'Showing recent first - click to keep added order' : 'Showing added order - click to sort by recent';
+}
+
+function setAutoNextEnabled(enabled) {
+  autoNextEnabled = enabled;
+  plAutoNextBtn.classList.toggle('active', autoNextEnabled);
+  plAutoNextBtn.textContent = autoNextEnabled ? 'Auto Next' : 'Stop End';
+  plAutoNextBtn.title = autoNextEnabled ? 'Auto play next video after the current one ends' : 'Stop when the current video ends';
+}
+
+function saveCustomPlaylistOrder() {
+  try {
+    localStorage.setItem(PLAYLIST_ORDER_KEY, JSON.stringify(playlist.map(playlistIdentity)));
+  } catch(e) {}
+}
+
+function clearCustomPlaylistOrder() {
+  try { localStorage.removeItem(PLAYLIST_ORDER_KEY); } catch(e) {}
+}
+
+function orderPlaylistByIds(ids) {
+  if (!ids || !ids.length) return false;
+  const playingEntry = currentIdx >= 0 ? playlist[currentIdx] : null;
+  const buckets = new Map();
+  playlist.forEach(entry => {
+    const id = playlistIdentity(entry);
+    if (!buckets.has(id)) buckets.set(id, []);
+    buckets.get(id).push(entry);
+  });
+
+  const ordered = [];
+  ids.forEach(id => {
+    const bucket = buckets.get(id);
+    if (bucket && bucket.length) ordered.push(bucket.shift());
+  });
+  buckets.forEach(bucket => ordered.push(...bucket));
+
+  if (ordered.length !== playlist.length) return false;
+  playlist = ordered;
+  if (playingEntry) currentIdx = playlist.indexOf(playingEntry);
+  return true;
+}
+
+function applySavedPlaylistOrder() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(PLAYLIST_ORDER_KEY) || '[]');
+    if (Array.isArray(saved) && orderPlaylistByIds(saved)) {
+      setSortRecentEnabled(false);
+      return true;
+    }
+  } catch(e) {}
+  return false;
+}
+
+// Re-sorts the playlist so the most recently opened/played file is first,
+// keeping currentIdx pointing at the same entry across the reorder.
+function sortPlaylistByRecency() {
+  const playingEntry = currentIdx >= 0 ? playlist[currentIdx] : null;
+  playlist.sort((a, b) => (b.openedAt || 0) - (a.openedAt || 0));
+  if (playingEntry) currentIdx = playlist.indexOf(playingEntry);
+}
+// Compact "time ago" label for playlist rows (e.g. "now", "5m", "3h", "2d")
+function relTime(ts) {
+  if (!ts) return '';
+  const diff = Date.now() - ts;
+  if (diff < 5000) return 'now';
+  if (diff < 60000) return Math.floor(diff/1000)+'s';
+  if (diff < 3600000) return Math.floor(diff/60000)+'m';
+  if (diff < 86400000) return Math.floor(diff/3600000)+'h';
+  if (diff < 604800000) return Math.floor(diff/86400000)+'d';
+  return Math.floor(diff/604800000)+'w';
 }
 
 async function playIdx(idx) {
@@ -1384,32 +2025,35 @@ async function playIdx(idx) {
       return;
     }
   }
+  // Mark this file as just-opened and keep the playlist sorted by recency
+  entry.openedAt = Date.now();
   currentIdx = idx;
+  if (sortRecentEnabled) sortPlaylistByRecency();
   const file = entry.file;
   if (vid.src) URL.revokeObjectURL(vid.src);
   window._currentFileName = file.name;
   window._currentFileSize = file.size;
   vid.src = URL.createObjectURL(file);
-  const label = `▶  ${file.name}  (${(file.size/1e6).toFixed(1)} MB)  [${idx+1}/${playlist.length}]`;
+  const label = `▶  ${file.name}  (${(file.size/1e6).toFixed(1)} MB)  [${currentIdx+1}/${playlist.length}]`;
   fileInfo.textContent = label;
   fileInfoFs.textContent = label;
-  highlightPlaylistItem(); resetAB();
+  renderPlaylist(); highlightPlaylistItem(); resetAB();
   subtitleCues = []; subtitleDisplay.classList.remove('visible'); subtitleDisplay.textContent = '';
   savePrefs();
   dropzone.style.display = 'none'; layout.style.display = 'flex';
   // Resume dialog — ask user if they want to continue from saved position
   const resumeT = getResumePos(file.name);
-  if (resumeT && resumeT > 5) {
+if (resumePlaybackEnabled && resumeT && resumeT > 5) {
     vid.addEventListener('loadedmetadata', () => {
-      if (vid.duration && resumeT < vid.duration * 0.97) {
-        showResumeDialog(resumeT);
-      } else {
-        vid.play();
-      }
+        if (vid.duration && resumeT < vid.duration * 0.97) {
+            showResumeDialog(resumeT);
+        } else {
+            vid.play();
+        }
     }, { once: true });
-  } else {
+} else {
     vid.play();
-  }
+}
 }
 
 function highlightPlaylistItem() {
@@ -1425,18 +2069,53 @@ function removePlaylistItem(i) {
   playlist.splice(i, 1);
   if (i < currentIdx) currentIdx--;
   else if (i === currentIdx) currentIdx = -1;
+  rememberOriginalPlaylistOrder();
+  saveCustomPlaylistOrder();
   renderPlaylist();
 }
 
 function resetPlaylist() {
-  clearAllHandles();           // forget all saved files in IndexedDB
-  playlist = [];
-  currentIdx = -1;
-  renderPlaylist();
-  playlistPanel.classList.remove('visible');
-  showToast('Playlist cleared');
+  const playingEntry = currentIdx >= 0 ? playlist[currentIdx] : null;
+  clearCustomPlaylistOrder();
+  setSortRecentEnabled(false);
+  orderPlaylistByIds(originalPlaylistOrder);
+  if (playingEntry) currentIdx = playlist.indexOf(playingEntry);
+  renderPlaylist(); highlightPlaylistItem();
+  savePrefs();
+  showToast('Playlist order reset');
 }
+
+function movePlaylistItem(fromIdx, toIdx) {
+  if (fromIdx == null || fromIdx < 0 || fromIdx >= playlist.length) return false;
+  toIdx = Math.max(0, Math.min(playlist.length - 1, toIdx));
+  if (fromIdx === toIdx) return false;
+  const playingEntry = currentIdx >= 0 ? playlist[currentIdx] : null;
+  const [moved] = playlist.splice(fromIdx, 1);
+  playlist.splice(toIdx, 0, moved);
+  if (playingEntry) currentIdx = playlist.indexOf(playingEntry);
+  setSortRecentEnabled(false);
+  saveCustomPlaylistOrder();
+  savePrefs();
+  renderPlaylist(); highlightPlaylistItem();
+  return true;
+}
+
 plResetBtn.addEventListener('click', e => { e.stopPropagation(); resetPlaylist(); });
+plSortBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  setSortRecentEnabled(!sortRecentEnabled);
+  clearCustomPlaylistOrder();
+  if (sortRecentEnabled) sortPlaylistByRecency();
+  else orderPlaylistByIds(originalPlaylistOrder);
+  renderPlaylist(); highlightPlaylistItem();
+  savePrefs();
+});
+plAutoNextBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  setAutoNextEnabled(!autoNextEnabled);
+  savePrefs();
+  showToast(autoNextEnabled ? 'Auto Next on' : 'Auto Next off');
+});
 
 function renderPlaylist() {
   playlistList.innerHTML = '';
@@ -1444,16 +2123,60 @@ function renderPlaylist() {
     const pending = !entry.file && entry.handle;
     const div = document.createElement('div');
     div.className = 'pl-item'+(i===currentIdx?' active':'')+(pending?' pending':'');
+    div.draggable = true;
+    div.dataset.index = i;
+    const timeTitle = entry.openedAt ? new Date(entry.openedAt).toLocaleString() : '';
     div.innerHTML = `<span class="pl-idx">${i+1}</span>`+
       `<span class="pl-name" title="${entry.name}">${entry.name}${pending?' <span class="pl-pending-tag">· tap to resume</span>':''}</span>`+
+      `<span class="pl-time" title="${timeTitle}">${relTime(entry.openedAt)}</span>`+
       `<button class="pl-remove" title="Remove from playlist">✕</button>`;
     div.addEventListener('click', e => { if(!e.target.closest('.pl-remove')) playIdx(i); });
     div.querySelector('.pl-remove').addEventListener('click', e => { e.stopPropagation(); removePlaylistItem(i); });
+    div.addEventListener('dragstart', e => {
+      if (e.target.closest('.pl-remove')) { e.preventDefault(); return; }
+      draggedPlaylistIndex = i;
+      div.classList.add('dragging');
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', String(i));
+    });
+    div.addEventListener('dragend', () => {
+      draggedPlaylistIndex = null;
+      document.querySelectorAll('.pl-item.dragging,.pl-item.drag-over').forEach(el => el.classList.remove('dragging','drag-over'));
+    });
+    div.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      div.classList.add('drag-over');
+    });
+    div.addEventListener('dragleave', () => div.classList.remove('drag-over'));
+    div.addEventListener('drop', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      div.classList.remove('drag-over');
+      const fromIdx = draggedPlaylistIndex ?? Number(e.dataTransfer.getData('text/plain'));
+      const rect = div.getBoundingClientRect();
+      let toIdx = i + (e.clientY > rect.top + rect.height / 2 ? 1 : 0);
+      if (fromIdx < toIdx) toIdx--;
+      movePlaylistItem(fromIdx, toIdx);
+    });
     playlistList.appendChild(div);
   });
-  plCount.textContent = `${playlist.length} file${playlist.length!==1?'s':''}`;
+plCount.textContent = `${playlist.length} file${playlist.length !== 1 ? 's' : ''}`;
   if (playlist.length) playlistPanel.classList.add('visible');
 }
+
+playlistList.addEventListener('dragover', e => {
+  if (draggedPlaylistIndex == null) return;
+  e.preventDefault();
+  e.stopPropagation();
+  e.dataTransfer.dropEffect = 'move';
+});
+playlistList.addEventListener('drop', e => {
+  if (draggedPlaylistIndex == null || e.target.closest('.pl-item')) return;
+  e.preventDefault();
+  e.stopPropagation();
+  movePlaylistItem(draggedPlaylistIndex, playlist.length - 1);
+});
 
 fileInput.addEventListener('change', e => loadFiles(e.target.files));
 dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
@@ -1477,6 +2200,9 @@ document.body.addEventListener('drop', async e => {
   const idsByName = await saveHandlesBulk(newEntries.map(en => en.handle).filter(Boolean));
   newEntries.forEach(en => { if (idsByName[en.name] != null) en.recordId = idsByName[en.name]; });
   playlist = [...playlist, ...newEntries];
+  rememberOriginalPlaylistOrder();
+  if (applySavedPlaylistOrder()) saveCustomPlaylistOrder();
+  else if (sortRecentEnabled) sortPlaylistByRecency();
   renderPlaylist();
   showToast(newEntries.length
     ? `+${newEntries.length} added${skipped ? ` (${skipped} already in playlist)` : ''}`
@@ -1500,13 +2226,15 @@ function setPlayState(playing) {
 vid.addEventListener('play',      () => setPlayState(true));
 vid.addEventListener('pause',     () => setPlayState(false));
 vid.addEventListener('loadeddata',() => setPlayState(!vid.paused));
-vid.addEventListener('ended', () => { if(currentIdx<playlist.length-1) playIdx(currentIdx+1); });
+vid.addEventListener('ended', () => {
+  if (autoNextEnabled && currentIdx < playlist.length - 1) playIdx(currentIdx + 1);
+});
 
 function showFlash() {
   flash.classList.remove('show'); void flash.offsetWidth; flash.classList.add('show');
   clearTimeout(flashTimer2); flashTimer2 = setTimeout(() => flash.classList.remove('show'), 600);
 }
-function togglePlay() { if(vid.paused) vid.play(); else vid.pause(); showFlash(); }
+function togglePlay() { if(vid.paused) vid.play(); else vid.pause(); showFlash(); if(minimalMode) flashMiniSeek(); }
 playBtn.addEventListener('click', togglePlay);
 vid.addEventListener('click', e => { if(!e.target.closest('#subtitle-display,#fs-ui')) togglePlay(); });
 
@@ -1540,7 +2268,8 @@ let seeking = false;
 seekWrap.addEventListener('mousedown', e => { seeking=true; vid.currentTime=ratioFromEvent(e)*vid.duration; });
 document.addEventListener('mousemove', e => { if(seeking && vid.duration) vid.currentTime=ratioFromEvent(e)*vid.duration; });
 document.addEventListener('mouseup', () => seeking=false);
-
+let resumePlaybackEnabled =
+    JSON.parse(localStorage.getItem("resumePlaybackEnabled") ?? "true");
 // ── Seekbar thumbnail preview ──
 // We use a hidden video clone for frame scrubbing
 let scrubVid = null;
@@ -1589,12 +2318,37 @@ seekWrap.addEventListener('mousemove', e => {
   const ratio = Math.min(1, Math.max(0, (e.clientX-rect.left)/rect.width));
   const t = ratio * vid.duration;
 
-  // position the preview popup
-  const popW = 160;
-  let left = e.clientX - rect.left;
-  // clamp so popup doesn't go outside seek bar
-  left = Math.max(popW/2, Math.min(rect.width - popW/2, left));
-  seekPreview.style.left = left + 'px';
+  const isFullscreen = !!(document.fullscreenElement || document.webkitFullscreenElement);
+  
+  if (isFullscreen) {
+    // In fullscreen: use fixed positioning with viewport coordinates
+    const popW = 160;
+    let left = e.clientX;
+    left = Math.max(popW/2, Math.min(window.innerWidth - popW/2, left));
+    const bottom = window.innerHeight - rect.top + 16;
+    seekPreview.style.position = 'fixed';
+    seekPreview.style.left = left + 'px';
+    seekPreview.style.top = 'auto';
+    seekPreview.style.bottom = bottom + 'px';
+  } else {
+    // In normal mode: position relative to seekbar (absolute positioning)
+// In normal mode: position relative to seekbar (absolute positioning)
+const popW = 160;
+let left = e.clientX - rect.left;
+
+// Keep preview inside seekbar
+left = Math.max(popW / 2, Math.min(rect.width - popW / 2, left));
+
+// Only move horizontally.
+// Let CSS control the vertical position.
+seekPreview.style.left = left + "px";
+
+// Remove any inline positioning from fullscreen mode
+seekPreview.style.removeProperty("top");
+seekPreview.style.removeProperty("bottom");
+seekPreview.style.removeProperty("position");
+  }
+  
   previewTime.textContent = fmt(t);
   seekPreview.classList.add('show');
 
@@ -1602,6 +2356,28 @@ seekWrap.addEventListener('mousemove', e => {
 });
 
 seekWrap.addEventListener('mouseleave', () => {
+  seekPreview.classList.remove('show');
+});
+
+miniSeekTrack.addEventListener('mousemove', e => {
+  if(!vid.duration || !minimalMode || !document.fullscreenElement) return;
+  const rect = miniSeekTrack.getBoundingClientRect();
+  const ratio = Math.min(1, Math.max(0, (e.clientX-rect.left)/rect.width));
+  const t = ratio * vid.duration;
+  const popW = 160;
+  let left = e.clientX - rect.left;
+  left = Math.max(popW / 2, Math.min(rect.width - popW / 2, left));
+
+  seekPreview.style.position = 'absolute';
+  seekPreview.style.left = left + 'px';
+  seekPreview.style.top = 'auto';
+  seekPreview.style.bottom = 'calc(100% + 16px)';
+  previewTime.textContent = fmt(t);
+  seekPreview.classList.add('show');
+  drawPreviewAt(t);
+});
+
+miniSeekTrack.addEventListener('mouseleave', () => {
   seekPreview.classList.remove('show');
 });
 
@@ -1617,6 +2393,7 @@ function showSkip(dir) {
   el.classList.add('show'); clearTimeout(dir==='left'?skipLT:skipRT);
   const t = setTimeout(()=>el.classList.remove('show'),700);
   if(dir==='left') skipLT=t; else skipRT=t;
+  if (minimalMode) flashMiniSeek();
 }
 rewBtn.addEventListener('click',  ()=>{ vid.currentTime=Math.max(0,vid.currentTime-10); showSkip('left'); });
 fwdBtn.addEventListener('click',  ()=>{ vid.currentTime=Math.min(vid.duration,vid.currentTime+10); showSkip('right'); });
@@ -1624,8 +2401,8 @@ prevBtn.addEventListener('click', ()=>{ if(currentIdx>0) playIdx(currentIdx-1); 
 nextBtn.addEventListener('click', ()=>{ if(currentIdx<playlist.length-1) playIdx(currentIdx+1); else showToast('Last file'); });
 
 // ── Volume ──
-volSlider.addEventListener('input', ()=>{ vid.volume=volSlider.value; vid.muted=vid.volume===0; updateVolIcon(); savePrefs(); });
-muteBtn.addEventListener('click',   ()=>{ vid.muted=!vid.muted; updateVolIcon(); });
+volSlider.addEventListener('input', ()=>{ vid.volume=volSlider.value; vid.muted=vid.volume===0; updateVolIcon(); savePrefs(); if(minimalMode) flashMiniSeek(); });
+muteBtn.addEventListener('click',   ()=>{ vid.muted=!vid.muted; updateVolIcon(); if(minimalMode) flashMiniSeek(); });
 function updateVolIcon() {
   const muted = vid.muted||vid.volume===0;
   volWave1.style.display = muted?'none':'';
@@ -1634,6 +2411,9 @@ function updateVolIcon() {
 
 // Scroll wheel volume control — scroll up to raise, down to lower
 function scrollVolume(e) {
+  // If the wheel is over a scrollable popover (More tools, speed/fit menus),
+  // let it scroll that popover instead of hijacking it for volume control.
+  if (e.target.closest('#more-menu, #speed-menu, #fit-menu')) return;
   e.preventDefault();
   const step = 0.05;
   const delta = e.deltaY < 0 ? step : -step;
@@ -1776,6 +2556,7 @@ document.addEventListener('keydown',e=>{
   if(['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)) return;
   if(kbdOverlay.classList.contains('open')){ if(e.key==='Escape'||e.key==='?') kbdOverlay.classList.remove('open'); return; }
   if(document.fullscreenElement) showControls();
+  if(minimalMode) flashMiniSeek();
   if(!vid.src&&e.key!=='?') return;
   switch(e.key){
     case ' ':case 'k': e.preventDefault(); togglePlay(); break;
@@ -1795,6 +2576,7 @@ document.addEventListener('keydown',e=>{
     case 'PageDown': e.preventDefault(); nextBtn.click(); break;
     case 'PageUp':   e.preventDefault(); prevBtn.click(); break;
     case '?': kbdOverlay.classList.add('open'); break;
+    case '/': kbdOverlay.classList.add('open'); break;
     default:
       // 1–9 keys jump to 10%–90% of video (like YouTube/VLC)
       if (e.key >= '1' && e.key <= '9') {
@@ -2466,11 +3248,12 @@ vid.addEventListener('loadedmetadata', () => {
 
     // Badge
     clearTimeout(badgeTimer);
+    const zoomSvg = zoomBtn.querySelector('svg');
     if(zoomLevel === 1){
       zoomBadge.classList.remove('show');
       zoomBtn.classList.remove('active');
-      // restore zoom-in icon
-      zoomBtn.querySelector('svg').innerHTML =
+      // restore zoom-in icon (only applies if the button still has an svg icon)
+      if(zoomSvg) zoomSvg.innerHTML =
         '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>' +
         '<line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>';
     } else {
@@ -2479,14 +3262,16 @@ vid.addEventListener('loadedmetadata', () => {
       zoomBtn.classList.add('active');
       badgeTimer = setTimeout(() => zoomBadge.classList.remove('show'), 1800);
       // when at max show a "reset" icon (minus), otherwise zoom-in icon
-      if(zoomLevel >= MAX){
-        zoomBtn.querySelector('svg').innerHTML =
-          '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>' +
-          '<line x1="8" y1="11" x2="14" y2="11"/>';  // zoom-out/reset icon
-      } else {
-        zoomBtn.querySelector('svg').innerHTML =
-          '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>' +
-          '<line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>';
+      if(zoomSvg){
+        if(zoomLevel >= MAX){
+          zoomSvg.innerHTML =
+            '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>' +
+            '<line x1="8" y1="11" x2="14" y2="11"/>';  // zoom-out/reset icon
+        } else {
+          zoomSvg.innerHTML =
+            '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>' +
+            '<line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/>';
+        }
       }
     }
   }
@@ -2673,6 +3458,208 @@ vid.addEventListener('touchend',e=>{
   } else if(Math.abs(dy)>40){ vid.volume=Math.min(1,Math.max(0,vid.volume-dy/300)); volSlider.value=vid.volume; updateVolIcon(); }
   touchX=null; touchY=null;
 },{passive:true});
+
+// ── "More tools" overflow menu ───────────────────────────────────────────────
+(function(){
+  const moreBtn  = document.getElementById('more-btn');
+  const moreMenu = document.getElementById('more-menu');
+  moreBtn.addEventListener('click', e => { e.stopPropagation(); moreMenu.classList.toggle('open'); });
+  document.addEventListener('click', () => moreMenu.classList.remove('open'));
+})();
+
+// ── Fullscreen minimal mode toggle ──────────────────────────────────────────
+(function(){
+  const fsMinimalToggle = document.getElementById('fs-minimal-toggle');
+  fsMinimalToggle.addEventListener('click', () => {
+    toggleMinimalMode();
+  });
+})();
+
+// ── Right-click context menu — surfaces every player action ────────────────
+(function(){
+  const ctxMenu      = document.getElementById('ctx-menu');
+  const speedToggle  = document.getElementById('ctx-speed-toggle');
+  const speedSub     = document.getElementById('ctx-speed-sub');
+  const fitToggle    = document.getElementById('ctx-fit-toggle');
+  const fitSub       = document.getElementById('ctx-fit-sub');
+  const resumeToggle = document.getElementById("ctx-resume-toggle");
+  const resumeValue  = document.getElementById("ctx-resume-value");
+
+  function refreshResumeToggle() {
+    resumeValue.textContent = resumePlaybackEnabled ? "ON" : "OFF";
+    resumeToggle.classList.toggle("active", resumePlaybackEnabled);
+}
+
+refreshResumeToggle();
+
+resumeToggle.addEventListener("click", () => {
+    resumePlaybackEnabled = !resumePlaybackEnabled;
+
+    localStorage.setItem(
+        "resumePlaybackEnabled",
+        JSON.stringify(resumePlaybackEnabled)
+    );
+
+    refreshResumeToggle();
+    closeCtx();
+
+    showToast(
+        `Resume playback ${resumePlaybackEnabled ? "enabled" : "disabled"}`
+    );
+});
+
+  function closeCtx(){
+    ctxMenu.classList.remove('open');
+    speedSub.classList.remove('open');
+    fitSub.classList.remove('open');
+    speedToggle.classList.remove('expanded');
+    fitToggle.classList.remove('expanded');
+  }
+
+  // Plain items: forward the click to the real control button, then close
+  ctxMenu.querySelectorAll('.ctx-item[data-forward]').forEach(item => {
+    item.addEventListener('click', () => {
+      if (item.classList.contains('disabled')) return;
+      const target = document.getElementById(item.dataset.forward);
+      if (target) target.click();
+      closeCtx();
+    });
+  });
+
+  // Zoom reset has no dedicated control button — call the exposed helper
+  document.getElementById('ctx-zoom-reset').addEventListener('click', e => {
+    if (e.currentTarget.classList.contains('disabled')) return;
+    if (window._zoomReset) window._zoomReset();
+    closeCtx();
+  });
+
+  // Hide Bottom Bar — no dedicated control button, toggles minimal mode directly
+  document.getElementById('ctx-minimal').addEventListener('click', e => {
+    if (e.currentTarget.classList.contains('disabled')) return;
+    toggleMinimalMode();
+    closeCtx();
+  });
+
+  // Speed submenu (accordion)
+  speedToggle.addEventListener('click', e => {
+    e.stopPropagation();
+    if (speedToggle.classList.contains('disabled')) return;
+    fitSub.classList.remove('open'); fitToggle.classList.remove('expanded');
+    speedSub.classList.toggle('open');
+    speedToggle.classList.toggle('expanded');
+  });
+  speedSub.querySelectorAll('.ctx-subopt').forEach(opt => {
+    opt.addEventListener('click', e => {
+      e.stopPropagation();
+      document.querySelector(`.speed-opt[data-speed="${opt.dataset.speed}"]`)?.click();
+      closeCtx();
+    });
+  });
+
+  // Video-fit submenu (accordion)
+  fitToggle.addEventListener('click', e => {
+    e.stopPropagation();
+    if (fitToggle.classList.contains('disabled')) return;
+    speedSub.classList.remove('open'); speedToggle.classList.remove('expanded');
+    fitSub.classList.toggle('open');
+    fitToggle.classList.toggle('expanded');
+  });
+  fitSub.querySelectorAll('.ctx-subopt').forEach(opt => {
+    opt.addEventListener('click', e => {
+      e.stopPropagation();
+      document.querySelector(`.fit-opt[data-fit="${opt.dataset.fit}"]`)?.click();
+      closeCtx();
+    });
+  });
+
+  const FIT_LABELS = {'fit-contain':'Contain','fit-fill':'Stretch','fit-cover':'Crop Fill','fit-wide':'Wide','fit-tall':'Tall'};
+
+  function refreshCtx(){
+    const hasVideo = !!vid.src;
+
+    // Play / Pause
+    document.getElementById('ctx-play-ic').textContent    = vid.paused ? '▶' : '⏸';
+    document.getElementById('ctx-play-label').textContent = vid.paused ? 'Play' : 'Pause';
+
+    // Prev / Next — disabled at playlist edges
+    document.getElementById('ctx-prev').classList.toggle('disabled', !hasVideo || currentIdx <= 0);
+    document.getElementById('ctx-next').classList.toggle('disabled', !hasVideo || currentIdx < 0 || currentIdx >= playlist.length - 1);
+
+    // A→B loop label reflects current loop-setting stage
+    const abLabels = ['Set A→B Loop Start', 'Set A→B Loop End', 'Clear A→B Loop'];
+    document.getElementById('ctx-ab-label').textContent = abLabels[abState] ?? 'A→B Loop';
+
+    // Slow-motion / zoom active indicator (mirrors the real buttons' state)
+    document.getElementById('ctx-slo').classList.toggle('active', document.getElementById('slo-btn').classList.contains('active'));
+    document.getElementById('ctx-zoom').classList.toggle('active', document.getElementById('zoom-btn').classList.contains('active'));
+
+    // Speed value + checkmark
+    const speedLabel = vid.playbackRate === 1 ? '1×' : vid.playbackRate + '×';
+    document.getElementById('ctx-speed-value').textContent = speedLabel;
+    speedSub.querySelectorAll('.ctx-subopt').forEach(o => {
+      o.classList.toggle('active', parseFloat(o.dataset.speed) === vid.playbackRate);
+    });
+
+    // Fit value + checkmark
+    const activeFitOpt = document.querySelector('.fit-opt.active');
+    const curFit = activeFitOpt ? activeFitOpt.dataset.fit : 'fit-contain';
+    document.getElementById('ctx-fit-value').textContent = FIT_LABELS[curFit] || 'Contain';
+    fitSub.querySelectorAll('.ctx-subopt').forEach(o => {
+      o.classList.toggle('active', o.dataset.fit === curFit);
+    });
+
+    // Mute / Unmute
+    const muted = vid.muted || vid.volume === 0;
+    document.getElementById('ctx-mute-ic').textContent    = muted ? '🔇' : '🔊';
+    document.getElementById('ctx-mute-label').textContent = muted ? 'Unmute' : 'Mute';
+
+    // Fullscreen
+    document.getElementById('ctx-fs-label').textContent = document.fullscreenElement ? 'Exit Fullscreen' : 'Fullscreen';
+
+    // Hide Bottom Bar — reflects current minimal-mode state
+    document.getElementById('ctx-minimal-ic').textContent    = minimalMode ? '👁' : '🙈';
+    document.getElementById('ctx-minimal-label').textContent = minimalMode ? 'Show Bottom Bar' : 'Hide Bottom Bar';
+    document.getElementById('ctx-minimal').classList.toggle('active', minimalMode);
+
+    // Disable everything that needs a loaded video — file/help actions stay live
+    const alwaysOn = new Set(['openfile-btn', 'kbd-btn']);
+    ctxMenu.querySelectorAll('.ctx-item[data-forward]').forEach(it => {
+      if (alwaysOn.has(it.dataset.forward)) return;
+      if (it.id === 'ctx-prev' || it.id === 'ctx-next') return; // already handled above
+      it.classList.toggle('disabled', !hasVideo);
+    });
+    document.getElementById('ctx-zoom-reset').classList.toggle('disabled', !hasVideo);
+    document.getElementById('ctx-minimal').classList.toggle('disabled', !hasVideo);
+    speedToggle.classList.toggle('disabled', !hasVideo);
+    fitToggle.classList.toggle('disabled', !hasVideo);
+  }
+
+  function openCtxAt(x, y){
+    refreshCtx();
+    ctxMenu.classList.add('open');
+    // offsetWidth/Height ignore the open transform, so they're safe to read immediately
+    const margin = 8;
+    const w = ctxMenu.offsetWidth, h = ctxMenu.offsetHeight;
+    let left = Math.min(x, window.innerWidth  - w - margin);
+    let top  = Math.min(y, window.innerHeight - h - margin);
+    left = Math.max(margin, left);
+    top  = Math.max(margin, top);
+    ctxMenu.style.left = left + 'px';
+    ctxMenu.style.top  = top  + 'px';
+  }
+
+  videoContainer.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    closeCtx();
+    openCtxAt(e.clientX, e.clientY);
+  });
+
+  document.addEventListener('click', e => { if (!ctxMenu.contains(e.target)) closeCtx(); });
+  document.addEventListener('contextmenu', e => { if (!videoContainer.contains(e.target)) closeCtx(); });
+  window.addEventListener('blur', closeCtx);
+  window.addEventListener('resize', closeCtx);
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeCtx(); });
+})();
 </script>
 </body>
 </html>
