@@ -449,6 +449,13 @@ video.fit-tall   {object-fit:fill;transform:scaleY(1.35);}
 .pl-item.dragging{opacity:.42;transform:scale(.985);box-shadow:0 12px 26px -16px rgba(0,0,0,.75);}
 .pl-item.drag-over{background:rgba(139,124,248,.18);color:var(--text);box-shadow:inset 0 0 0 1px rgba(139,124,248,.35);}
 .pl-idx{font-size:11px;min-width:16px;text-align:right;opacity:.5}
+.pl-drag-handle{display:flex;align-items:center;justify-content:center;flex-shrink:0;width:16px;height:22px;
+  cursor:grab;opacity:.22;transition:opacity .15s,color .15s,transform .15s;color:var(--muted);}
+.pl-drag-handle svg{width:11px;height:15px;pointer-events:none;transition:transform .15s var(--ease);}
+.pl-item:hover .pl-drag-handle{opacity:.6}
+.pl-drag-handle:hover{opacity:1 !important;color:var(--accent);}
+.pl-drag-handle:hover svg{transform:scale(1.12);}
+.pl-item.dragging .pl-drag-handle{cursor:grabbing;opacity:1;color:var(--accent);}
 .pl-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
 .pl-pending-tag{font-size:11px;color:var(--accent);opacity:.85}
 .pl-time{font-size:10.5px;color:var(--muted);opacity:.6;flex-shrink:0;white-space:nowrap;
@@ -804,7 +811,13 @@ body.resizing video{pointer-events:none;}
 #main-col.minimal-mode:-webkit-full-screen #fs-minimal-toggle:hover{
   background:rgba(248,113,113,.2);border-color:rgba(248,113,113,.5);
   box-shadow:0 12px 32px -6px rgba(248,113,113,.3);
-}</style>
+}
+.dev-hide{
+    display:none !important;
+}
+
+
+</style>
 </head>
 <body>
 
@@ -1094,33 +1107,33 @@ body.resizing video{pointer-events:none;}
                 </svg>
               </button>
               <div id="more-menu">
-
-                <div class="more-section-title">Loop &amp; Effects</div>
-                <button class="ctrl-btn" id="ab-btn" title="A→B Loop (L)">
+                
+                <div class="more-section-title dev-hide">Loop &amp; Effects</div>
+                <button class="ctrl-btn dev-hide" id="ab-btn" title="A→B Loop (L)">
                   <span class="ctx-ic">🔁</span>
                   <span class="ctrl-label">A→B Loop</span>
                 </button>
-                <button class="ctrl-btn" id="slo-btn" title="Slow Motion (Z)">
+                <button class="ctrl-btn dev-hide" id="slo-btn" title="Slow Motion (Z)">
                   <span class="ctx-ic">🐢</span>
                   <span class="ctrl-label">Slow Motion</span>
                 </button>
-                <button class="ctrl-btn" id="zoom-btn" title="Zoom (+/− to step, X to reset)">
+                <button class="ctrl-btn dev-hide" id="zoom-btn" title="Zoom (+/− to step, X to reset)">
                   <span class="ctx-ic">🔍</span>
                   <span class="ctrl-label">Zoom</span>
                 </button>
 
-                <div class="more-divider"></div>
-                <div class="more-section-title">Capture &amp; Color</div>
-                <button class="ctrl-btn" id="shot-btn" title="Screenshot (S)">
+                <div class="more-divider dev-hide"></div>
+                <div class="more-section-title dev-hide">Capture &amp; Color</div>
+                <button class="ctrl-btn dev-hide" id="shot-btn" title="Screenshot (S)">
                   <span class="ctx-ic">📸</span>
                   <span class="ctrl-label">Screenshot</span>
                 </button>
-                <button class="ctrl-btn" id="color-btn" title="Color Adjustments (C)">
+                <button class="ctrl-btn dev-hide" id="color-btn" title="Color Adjustments (C)">
                   <span class="ctx-ic">🎨</span>
                   <span class="ctrl-label">Color Adjustments</span>
                 </button>
 
-                <div class="more-divider"></div>
+                <div class="more-divider dev-hide"></div>
                 <div class="more-section-title">Library</div>
                 <button class="ctrl-btn" id="srt-btn" title="Load Subtitles (.srt)" onclick="document.getElementById('srt-input').click()">
                   <span class="ctx-ic">💬</span>
@@ -1131,7 +1144,7 @@ body.resizing video{pointer-events:none;}
                   <span class="ctrl-label">Bookmarks</span>
                 </button>
                 <!-- Chapter jump -->
-                <button class="ctrl-btn" id="chapter-btn" title="Jump to Scene (J)">
+                <button class="ctrl-btn dev-hide" id="chapter-btn" title="Jump to Scene (J)">
                   <span class="ctx-ic">⚡</span>
                   <span class="ctrl-label">Jump to Scene</span>
                 </button>
@@ -1146,7 +1159,7 @@ body.resizing video{pointer-events:none;}
 
                 <div class="more-divider"></div>
                 <div class="more-section-title">Info</div>
-                <button class="ctrl-btn" id="pip-btn" title="Picture in Picture (P)">
+                <button class="ctrl-btn  dev-hide" id="pip-btn" title="Picture in Picture (P)">
                   <span class="ctx-ic">🖼</span>
                   <span class="ctrl-label">Picture in Picture</span>
                 </button>
@@ -1755,6 +1768,22 @@ async function removeHandleRecord(id) {
     db.transaction('handles', 'readwrite').objectStore('handles').delete(id);
   } catch(e) {}
 }
+// Update a saved handle record's timestamp so "recently played" survives a
+// reload — without this, restoreSavedHandles() always sorts by the time a
+// file was first added rather than the time it was last opened/played.
+async function touchHandleRecordTs(id, ts) {
+  if (id == null) return;
+  try {
+    const db = await openHandleDB();
+    const tx = db.transaction('handles', 'readwrite');
+    const store = tx.objectStore('handles');
+    const getReq = store.get(id);
+    getReq.onsuccess = () => {
+      const rec = getReq.result;
+      if (rec) { rec.ts = ts; store.put(rec); }
+    };
+  } catch(e) {}
+}
 async function clearAllHandles() {
   try {
     const db = await openHandleDB();
@@ -2027,6 +2056,7 @@ async function playIdx(idx) {
   }
   // Mark this file as just-opened and keep the playlist sorted by recency
   entry.openedAt = Date.now();
+  if (entry.recordId != null) touchHandleRecordTs(entry.recordId, entry.openedAt);
   currentIdx = idx;
   if (sortRecentEnabled) sortPlaylistByRecency();
   const file = entry.file;
@@ -2126,7 +2156,8 @@ function renderPlaylist() {
     div.draggable = true;
     div.dataset.index = i;
     const timeTitle = entry.openedAt ? new Date(entry.openedAt).toLocaleString() : '';
-    div.innerHTML = `<span class="pl-idx">${i+1}</span>`+
+    div.innerHTML = `<span class="pl-drag-handle" title="Drag to reorder"><svg viewBox="0 0 10 16" fill="currentColor"><circle cx="2.5" cy="2.5" r="1.5"/><circle cx="7.5" cy="2.5" r="1.5"/><circle cx="2.5" cy="8" r="1.5"/><circle cx="7.5" cy="8" r="1.5"/><circle cx="2.5" cy="13.5" r="1.5"/><circle cx="7.5" cy="13.5" r="1.5"/></svg></span>`+
+      `<span class="pl-idx">${i+1}</span>`+
       `<span class="pl-name" title="${entry.name}">${entry.name}${pending?' <span class="pl-pending-tag">· tap to resume</span>':''}</span>`+
       `<span class="pl-time" title="${timeTitle}">${relTime(entry.openedAt)}</span>`+
       `<button class="pl-remove" title="Remove from playlist">✕</button>`;
